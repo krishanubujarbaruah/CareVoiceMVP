@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>CARE App</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@10.7.2/lib/languages/python.min.js"></script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/a11y-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+</head>
+
+<body>
+  <div class="container mt-5">
+    <nav class="nav nav-pills nav-fill">
+      <a class="nav-link" href="/">Home</a>
+      <a class="nav-link" href="/doctor">Doctor</a>
+      <a class="nav-link"  href="/assistant">Assistant</a>
+      <a class="nav-link active" aria-current="page" href="#">Know More …</a>
+    </nav>
+    <br />
+    <h1 style="color:white">Your Health Expert</h1>
+    <div class="chat-box mt-3">
+      <!-- Chat messages will be added here dynamically -->
+    </div>
+    <div class="form-group mt-3">
+      <textarea class="form-control" rows="2" placeholder="Type your message here" id="message-input"></textarea>
+    </div>
+    <!-- <button type="button" class="btn btn-primary" id="send-btn">Send</button> -->
+
+    <div class="d-flex justify-content-between">
+      <button type="button" class="btn btn-primary" id="send-btn">Send</button>
+      <!-- Reset button placed here, aligned to the right end -->
+      <button type="button" class="btn btn-danger" id="reset-btn">Reset Chat</button>
+   </div>
+  </div>
+
+  <script>
+    // Function to save the chat to sessionStorage
+    function saveChat() {
+      const chatMessages = chatBox.innerHTML;
+      sessionStorage.setItem('knowmorechat', chatMessages);
+    }
+  
+    // Function to load the chat from sessionStorage
+    function loadChat() {
+      const savedChat = sessionStorage.getItem('knowmorechat');
+      if (savedChat) {
+        chatBox.innerHTML = savedChat;
+      }
+    }
+  
+    // Function to highlight code using highlight.js library
+    function highlightAll() {
+      document.querySelectorAll("pre code").forEach(block => {
+        hljs.highlightBlock(block);
+      });
+    }
+  
+    // Initialize highlight.js
+    setInterval(highlightAll, 1000);
+  
+    // DOM elements
+    const chatBox = document.querySelector(".chat-box");
+    const messageInput = document.querySelector("#message-input");
+    const sendBtn = document.querySelector("#send-btn");
+    const resetBtn = document.querySelector("#reset-btn");
+  
+    // Function to add a message to the chat
+    function addMessage(message, isUserMessage) {
+      const messageDiv = document.createElement("div");
+      messageDiv.classList.add("mt-3", "p-3", "rounded");
+  
+      if (isUserMessage) {
+        messageDiv.classList.add("user-message");
+      } else {
+        messageDiv.classList.add("bot-message");
+      }
+  
+      messageDiv.innerHTML = `<p>${message}</p>`;
+  
+      chatBox.appendChild(messageDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      saveChat(); // Save the chat after adding a message
+    }
+  
+    // Function to send the user message to the server
+    function sendMessage() {
+      const message = messageInput.value.trim();
+  
+      if (message !== "") {
+        addMessage(message, true);
+  
+        fetch("/knowmore", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              message
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            messageInput.value = ""; // Clear the input after sending
+            addMessage(data.content, false); // Add the bot response
+          })
+          .catch(error => console.error(error));
+      }
+    }
+  
+    // Event listeners for sending messages
+    sendBtn.addEventListener("click", sendMessage);
+    messageInput.addEventListener("keydown", event => {
+      if (event.keyCode === 13 && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+  
+    // Function to display the initial bot message
+    function displayInitialMessage() {
+      const initialMessage = "Come on !! ask me anything about healthcare practices so that you live a healthy life !!!!";
+      addMessage(initialMessage, false);
+    }
+  
+    // Reset chat function to clear the chat except for the initial message
+    function resetChat() {
+      chatBox.innerHTML = ''; // Clear all messages
+      displayInitialMessage(); // Display the initial message again
+      saveChat(); // Save the reset state of the chat
+    }
+  
+    // Event listener for the reset button
+    resetBtn.addEventListener("click", resetChat);
+  
+    // Load the chat or display the initial message when the DOM is fully loaded
+    document.addEventListener("DOMContentLoaded", function() {
+      loadChat();
+      if (!sessionStorage.getItem('knowmorechat')) {
+        displayInitialMessage();
+      }
+    });
+  
+    // SSE to receive messages from the server
+    const eventSource = new EventSource("/stream");
+  
+    eventSource.onmessage = function(event) {
+      addMessage(event.data, false); // Display the message
+      alert("New message received: " + event.data); // Alert the user
+    };
+  </script>
+</body>
+
+</html>

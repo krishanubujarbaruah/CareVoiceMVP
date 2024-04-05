@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CARE App</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@10.7.2/lib/languages/python.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/a11y-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+
+    <style>
+      .summary-box {
+          background-color: #333; /* Dark background for contrast */
+          padding: 20px;
+          border-radius: 5px;
+          min-height: 100px; /* Adjust the minimum height as needed */
+      }
+
+      .text-white {
+          color: white;
+      }
+  </style>
+</head>
+
+<body>
+<div class="container mt-5">
+    <nav class="nav nav-pills nav-fill">
+      <a class="nav-link" href="/">Home</a>
+        <a class="nav-link active" aria-current="page" href="/doctor">Doctor</a>
+        <a class="nav-link" href="/assistant">Assistant</a>
+        <a class="nav-link" href="/knowmorepage">Know More ... </a>
+    </nav>
+    <br/>
+    <h1 style="color:white">Doctor's Dashboard</h1>
+    <nav class="nav nav-pills nav-fill">
+        <a class="nav-link" href="/moreinfopage">Get more info</a>
+        <a class="nav-link" href="/prescriptionpage">Prescription </a>
+        <a class="nav-link " href="/suggestionpage">Suggestion</a>
+    </nav>
+</div>
+<div class="container mt-5">
+    <div class="row">
+        <div class="col">
+            <button type="button" class="btn btn-outline-warning" id="summary-btn">Generate Summary</button>
+        </div>
+    </div>
+    <br/><br/>
+    <div class="row">
+        <div class="col">
+            <div class="summary-box" id="summaryBox">
+                <div id="summaryText" class="text-white" placeholder="Press the above button to generate the summary !!" > </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function receiveSummary(summary) {
+    var summaryText = document.getElementById("summaryText");
+    summaryText.innerText = summary;
+    summaryText.style.display = 'block'; // Make the summary text visible
+
+    // Save the summary to session storage
+    sessionStorage.setItem('doctorSummary', summary);
+     }
+
+    function clearSummary() {
+        var summaryText = document.getElementById("summaryText");
+        summaryText.innerText = "Press Generate Summary";
+    }
+
+    document.getElementById("summary-btn").addEventListener("click", function() {
+        fetch('/summary')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json().then(data => {
+                    receiveSummary(data.content);
+                });
+            })
+            .catch(error => {
+                console.error('There has been a problem with your fetch operation:', error);
+            });
+    });
+
+    document.addEventListener('DOMContentLoaded', (event) => {
+    var savedSummary = sessionStorage.getItem('doctorSummary');
+    if (savedSummary) {
+        receiveSummary(savedSummary);
+    }
+});
+</script>
+</body>
+</html>

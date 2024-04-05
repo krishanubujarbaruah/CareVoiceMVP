@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CARE App</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    body {
+      color: white; /* Set text color to white */
+    }
+  </style>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@10.7.2/lib/languages/python.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/a11y-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+</head>
+<body>
+  <div class="container mt-5">
+    <h1 style="color: white;">Suggestions</h1>
+    <form id="info-form" action="/suggestion" method="POST">
+      <div class="form-group">
+        <label for="name" style="color: white;">Write Suggestions for the patient . Tell the assistant to convey the directions. </label>
+        <textarea class="form-control" id="name" name="name" style="resize: vertical;" required></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Submit</button>
+      <a href="/doctor" class="btn btn-secondary ">Go Back</a>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById("info-form").addEventListener("submit", function (event) {
+      event.preventDefault(); // Prevent the default form submission
+
+      var name = document.getElementById("name").value;
+
+      fetch(this.action, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: name })
+      })
+      .then(function(response) {
+        // Redirect to /assistant after the POST request is successful
+        window.location.href = "/assistant";
+      }).catch(function(error) {
+        console.error('Error:', error);
+      });
+    });
+
+    document.getElementById("name").addEventListener("input", function () {
+      this.rows = Math.ceil((this.scrollHeight - this.offsetHeight) / 20) + 1;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>CARE App</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@10.7.2/lib/languages/python.min.js"></script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/a11y-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+</head>
+
+<body>
+  <div class="container mt-5">
+    <nav class="nav nav-pills nav-fill">
+      <a class="nav-link" href="/">Home</a>
+      <a class="nav-link" href="/doctor">Doctor</a>
+      <a class="nav-link active" aria-current="page" href="#">Assistant</a>
+      <a class="nav-link" href="/knowmorepage">Know More …</a>
+    </nav>
+    <br />
+    <h1 style="color:white">AI assistant for Dr.Patil</h1>
+    <div class="chat-box mt-3">
+      <!-- Chat messages will be added here dynamically -->
+    </div>
+    <div class="form-group mt-3">
+      <textarea class="form-control" rows="2" placeholder="Type your message here" id="message-input"></textarea>
+    </div>
+    <div class="d-flex justify-content-between">
+      <button type="button" class="btn btn-primary" id="send-btn">Send</button>
+      <!-- Reset button placed here, aligned to the right end -->
+      <button type="button" class="btn btn-danger" id="reset-btn">Reset Chat</button>
+   </div>
+  </div>
+
+  <script>
+    function saveChat() {
+      const chatMessages = chatBox.innerHTML;
+      sessionStorage.setItem('chat', chatMessages);
+    }
+
+    function loadChat() {
+      const savedChat = sessionStorage.getItem('chat');
+      if (savedChat) {
+        chatBox.innerHTML = savedChat;
+      }
+    }
+
+    setInterval(highlightAll, 1000);
+    // Function to highlight code using highlight.js library
+    function highlightAll() {
+      document.querySelectorAll("pre code").forEach(block => {
+        hljs.highlightBlock(block);
+      });
+    }
+
+    const chatBox = document.querySelector(".chat-box");
+    const messageInput = document.querySelector("#message-input");
+    const sendBtn = document.querySelector("#send-btn");
+
+    function addMessage(message, isUserMessage) {
+      const messageDiv = document.createElement("div");
+      messageDiv.classList.add("mt-3", "p-3", "rounded");
+
+      if (isUserMessage) {
+        messageDiv.classList.add("user-message");
+      } else {
+        messageDiv.classList.add("bot-message");
+      }
+
+      messageDiv.innerHTML = `<p>${message}</p>`;
+
+      chatBox.appendChild(messageDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      saveChat(); // Save the chat after adding a message
+    }
+
+    function sendMessage() {
+      const message = messageInput.value.trim();
+
+      if (message !== "") {
+        addMessage(message, true);
+
+        fetch("/api", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              message
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            messageInput.value = ""; // Clear the input after sending
+            const messageDiv = document.createElement("div");
+            messageDiv.classList.add("mt-3", "p-3", "rounded");
+            messageDiv.classList.add("bot-message");
+
+            const content = data.content;
+
+            // Check if the content has code block
+            const hasCodeBlock = content.includes("```");
+            if (hasCodeBlock) {
+              // If the content has code block, wrap it in a <pre><code> element
+              const codeContent = content.replace(/```([\s\S]+?)```/g, '</p><pre><code>$1</code></pre><p>');
+              messageDiv.innerHTML = `<p>${codeContent}</p>`;
+            } else {
+              messageDiv.innerHTML = `<p>${content}</p>`;
+            }
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            saveChat(); // Save the chat after receiving a bot message
+          })
+          .catch(error => console.error(error));
+      }
+    }
+
+    sendBtn.addEventListener("click", sendMessage);
+    messageInput.addEventListener("keydown", event => {
+      if (event.keyCode === 13 && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+
+      }
+    });
+
+    // Function to display the initial bot message
+    function displayInitialMessage() {
+      const initialMessage = "Can you please state your name and age for the record?";
+      addMessage(initialMessage, false);
+    }
+
+    // Call the function when the DOM is fully loaded
+    document.addEventListener("DOMContentLoaded", function() {
+      loadChat();
+      // Check if the chat is empty, if so, display the initial message
+      if (!sessionStorage.getItem('chat')) {
+        displayInitialMessage();
+      }
+    });
+    const eventSource = new EventSource("/stream");
+
+    eventSource.onmessage = function(event) {
+      // Display the message in the chat
+      addMessage(event.data, false);
+      // Create an alert to notify the user about the new message
+  alert("New message received: " + event.data);
+    };
+
+    function resetChat() {
+        sessionStorage.clear(); // Clear the session storage
+        chatBox.innerHTML = ''; // Clear the chat box in the UI
+        displayInitialMessage(); // Add the initial message back to the chat
+      } 
+
+      const resetBtn = document.querySelector("#reset-btn");
+        resetBtn.addEventListener("click", function() {
+          fetch("/reset", {
+            method: "GET"
+          })
+          .then(response => {
+            if (response.ok) {
+              resetChat();
+            } else {
+              console.error('Failed to reset the chat');
+            }
+          })
+          .catch(error => console.error(error));
+        }); 
+
+        
+  </script>
+</body>
+
+</html>
