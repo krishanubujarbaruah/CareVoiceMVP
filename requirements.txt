@@ -1,0 +1,9 @@
+flask
+openai
+python-dotenv
+langchain
+sentence-transformers
+azure.search
+azure-search-documents==11.4.0b8
+azure.identity
+pypdf
